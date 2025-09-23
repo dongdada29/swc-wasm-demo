@@ -1,8 +1,7 @@
-import { transformSync } from '@swc/wasm-web'
 import { useWorkspaceStore } from '@/stores/workspace'
 
 export interface CompileOptions {
-  jsc: {
+  jsc?: {
     target?: 'es3' | 'es5' | 'es2015' | 'es2016' | 'es2017' | 'es2018' | 'es2019' | 'es2020' | 'es2021' | 'es2022'
     parser?: {
       syntax?: 'ecmascript' | 'typescript' | 'jsx'
@@ -41,6 +40,7 @@ export interface CompileResult {
 export class CompilerService {
   private static instance: CompilerService
   private initialized = false
+  private swcWasm: any = null
 
   static getInstance(): CompilerService {
     if (!CompilerService.instance) {
@@ -53,17 +53,34 @@ export class CompilerService {
     if (this.initialized) return
     
     try {
+      // 动态导入 SWC WASM
+      const swcModule = await import('@swc/wasm-web')
+      this.swcWasm = swcModule.transformSync || swcModule.default?.transformSync
+      
+      if (!this.swcWasm) {
+        throw new Error('SWC WASM transformSync function not found')
+      }
+      
       // Warm up SWC WASM
-      transformSync('console.log("test")', {})
+      this.swcWasm('console.log("test")', {})
       this.initialized = true
       console.log('SWC WASM initialized successfully')
     } catch (error) {
       console.error('Failed to initialize SWC WASM:', error)
-      throw error
+      // 不抛出错误，允许应用继续运行
+      this.initialized = true
     }
   }
 
   compile(code: string, options: CompileOptions = {}): CompileResult {
+    if (!this.initialized || !this.swcWasm) {
+      // 如果 SWC 未初始化，返回原始代码
+      return {
+        code,
+        errors: ['SWC compiler not initialized']
+      }
+    }
+
     try {
       const defaultOptions: CompileOptions = {
         jsc: {
@@ -90,7 +107,7 @@ export class CompilerService {
 
       const mergedOptions = this.mergeOptions(defaultOptions, options)
       
-      const result = transformSync(code, mergedOptions)
+      const result = this.swcWasm(code, mergedOptions)
       
       return {
         code: result.code,
