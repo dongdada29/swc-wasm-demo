@@ -176,6 +176,10 @@ export function NewProjectPage() {
         theme: 'light' as const,
         fontSize: 14,
         tabSize: 2
+      },
+      compiler: {
+        status: 'initializing' as const,
+        mode: 'wasm' as const
       }
     }
 

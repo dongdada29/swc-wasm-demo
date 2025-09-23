@@ -1,7 +1,7 @@
 import React from 'react'
 import { FolderOpen, File, FolderClosed, Plus, MoreVertical } from 'lucide-react'
 import { Button } from './ui/button'
-import { useWorkspaceStore, FileNode } from '@/stores/workspace'
+import { useWorkspaceStore, FileNode } from '../stores/workspace'
 
 interface FileTreeProps {
   files: FileNode[]
@@ -16,9 +16,12 @@ const FileTreeItem: React.FC<{ file: FileNode; level?: number }> = ({ file, leve
   const isActive = currentFile?.id === file.id
   
   const handleClick = () => {
+    console.log('🖱️ [FILETREE] Clicked on file:', file.name, 'type:', file.type)
     if (file.type === 'file') {
+      console.log('📄 [FILETREE] Setting active file:', file.id)
       setActiveFile(file.id)
     } else {
+      console.log('📁 [FILETREE] Toggling folder expansion:', isExpanded ? 'collapsing' : 'expanding')
       setIsExpanded(!isExpanded)
     }
   }

@@ -1,9 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { loader } from '@monaco-editor/react'
-import { useWorkspaceStore } from '@/stores/workspace'
-import * as monaco from 'monaco-editor'
-
-loader.config({ monaco })
+import React from 'react'
+import Editor from '@monaco-editor/react'
+import { useWorkspaceStore } from '../stores/workspace'
 
 interface CodeEditorProps {
   className?: string
@@ -11,77 +8,6 @@ interface CodeEditorProps {
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({ className }) => {
   const { currentFile, updateFileContent } = useWorkspaceStore()
-  const [editor, setEditor] = useState<monaco.editor.IStandaloneCodeEditor | null>(null)
-  const editorRef = useRef<HTMLDivElement>(null)
-  const [isEditorReady, setIsEditorReady] = useState(false)
-
-  useEffect(() => {
-    if (editorRef.current && !editor) {
-      const editorInstance = monaco.editor.create(editorRef.current, {
-        theme: 'vs-light',
-        automaticLayout: true,
-        fontSize: 14,
-        tabSize: 2,
-        minimap: { enabled: false },
-        scrollBeyondLastLine: false,
-        wordWrap: 'on',
-        lineNumbers: 'on',
-        renderLineHighlight: 'all',
-        selectOnLineNumbers: true,
-        matchBrackets: 'always',
-        autoIndent: 'advanced',
-        formatOnPaste: true,
-        formatOnType: true,
-        suggestOnTriggerCharacters: true,
-        quickSuggestions: true,
-        parameterHints: { enabled: true },
-      })
-
-      setEditor(editorInstance)
-      
-      // Editor ready callback
-      editorInstance.onDidModelChangeContent(() => {
-        setIsEditorReady(true)
-      })
-    }
-
-    return () => {
-      if (editor) {
-        editor.dispose()
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    if (editor && currentFile) {
-      // Set language based on file extension
-      const language = getLanguageFromFile(currentFile.name)
-      
-      // Create or update model
-      const uri = monaco.Uri.parse(`file://${currentFile.path}`)
-      let model = monaco.editor.getModel(uri)
-      
-      if (!model) {
-        model = monaco.editor.createModel(
-          currentFile.content || '',
-          language,
-          uri
-        )
-      }
-      
-      editor.setModel(model)
-      
-      // Update content when file changes
-      const disposable = model.onDidChangeContent(() => {
-        const newContent = model.getValue()
-        updateFileContent(currentFile.id, newContent)
-      })
-      
-      return () => {
-        disposable.dispose()
-      }
-    }
-  }, [editor, currentFile, updateFileContent])
 
   const getLanguageFromFile = (fileName: string): string => {
     const ext = fileName.split('.').pop()?.toLowerCase()
@@ -106,6 +32,35 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ className }) => {
     }
   }
 
+  const handleEditorChange = (value: string | undefined) => {
+    if (currentFile && value !== undefined) {
+      console.log('📝 [EDITOR] Content changed, length:', value.length)
+      updateFileContent(currentFile.id, value)
+    }
+  }
+
+  const handleEditorDidMount = (editor: any) => {
+    console.log('✅ [EDITOR] Monaco editor mounted')
+    // 可以在这里添加更多的编辑器配置
+    editor.updateOptions({
+      fontSize: 14,
+      tabSize: 2,
+      minimap: { enabled: false },
+      scrollBeyondLastLine: false,
+      wordWrap: 'on',
+      lineNumbers: 'on',
+      renderLineHighlight: 'all',
+      selectOnLineNumbers: true,
+      matchBrackets: 'always',
+      autoIndent: 'advanced',
+      formatOnPaste: true,
+      formatOnType: true,
+      suggestOnTriggerCharacters: true,
+      quickSuggestions: true,
+      parameterHints: { enabled: true },
+    })
+  }
+
   return (
     <div className={`h-full ${className}`}>
       {currentFile ? (
@@ -120,11 +75,34 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ className }) => {
               </span>
             </div>
           </div>
-          <div 
-            ref={editorRef} 
-            className="flex-1"
-            style={{ minHeight: '400px' }}
-          />
+          <div className="flex-1">
+            <Editor
+              height="100%"
+              language={getLanguageFromFile(currentFile.name)}
+              value={currentFile.content || ''}
+              onChange={handleEditorChange}
+              onMount={handleEditorDidMount}
+              theme="vs-light"
+              options={{
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                fontSize: 14,
+                tabSize: 2,
+                minimap: { enabled: false },
+                wordWrap: 'on',
+                lineNumbers: 'on',
+                renderLineHighlight: 'all',
+                selectOnLineNumbers: true,
+                matchBrackets: 'always',
+                autoIndent: 'advanced',
+                formatOnPaste: true,
+                formatOnType: true,
+                suggestOnTriggerCharacters: true,
+                quickSuggestions: true,
+                parameterHints: { enabled: true },
+              }}
+            />
+          </div>
         </div>
       ) : (
         <div className="h-full flex items-center justify-center text-muted-foreground">
