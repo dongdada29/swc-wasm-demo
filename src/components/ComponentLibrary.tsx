@@ -3,7 +3,8 @@ import { useComponentStore, Component } from '@/stores/component'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
-import { Search, Plus, Filter, Code, Eye } from 'lucide-react'
+import { Input } from './ui/input'
+import { Search, Plus, Code, Eye, Save, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
 
 export const ComponentLibrary: React.FC = () => {
@@ -17,11 +18,21 @@ export const ComponentLibrary: React.FC = () => {
     setSelectedCategory,
     getComponentsByCategory,
     searchComponents,
-    generateComponentCode
+    generateComponentCode,
+    addComponent
   } = useComponentStore()
   
   const [previewCode, setPreviewCode] = useState<string>('')
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [newComponent, setNewComponent] = useState({
+    name: '',
+    displayName: '',
+    description: '',
+    category: 'ui' as Component['category'],
+    tags: '',
+    code: ''
+  })
   
   const categories = [
     { id: 'all', name: 'All Components', count: components.length },
@@ -60,16 +71,144 @@ export const ComponentLibrary: React.FC = () => {
     setIsPreviewOpen(true)
   }
   
+  const handleCreateComponent = () => {
+    if (!newComponent.name || !newComponent.displayName || !newComponent.code) {
+      return
+    }
+    
+    const component: Component = {
+      id: '',
+      name: newComponent.name,
+      displayName: newComponent.displayName,
+      description: newComponent.description,
+      category: newComponent.category,
+      tags: newComponent.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+      code: newComponent.code,
+      props: [],
+      dependencies: ['react'],
+      isCustom: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+    
+    addComponent(component)
+    setIsCreateOpen(false)
+    setNewComponent({
+      name: '',
+      displayName: '',
+      description: '',
+      category: 'ui',
+      tags: '',
+      code: ''
+    })
+  }
+  
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="border-b p-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold">Component Library</h2>
-          <Button size="sm">
-            <Plus className="w-4 h-4 mr-1" />
-            New Component
-          </Button>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="w-4 h-4 mr-1" />
+                New Component
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[80vh]">
+              <DialogHeader>
+                <DialogTitle>Create New Component</DialogTitle>
+                <DialogDescription>
+                  Create a custom component to add to your library
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Component Name</label>
+                    <Input
+                      placeholder="e.g., MyButton"
+                      value={newComponent.name}
+                      onChange={(e) => setNewComponent(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Display Name</label>
+                    <Input
+                      placeholder="e.g., My Button"
+                      value={newComponent.displayName}
+                      onChange={(e) => setNewComponent(prev => ({ ...prev, displayName: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Description</label>
+                  <Input
+                    placeholder="Brief description of the component"
+                    value={newComponent.description}
+                    onChange={(e) => setNewComponent(prev => ({ ...prev, description: e.target.value }))}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Category</label>
+                    <select
+                      value={newComponent.category}
+                      onChange={(e) => setNewComponent(prev => ({ ...prev, category: e.target.value as Component['category'] }))}
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                    >
+                      <option value="ui">UI Elements</option>
+                      <option value="layout">Layout</option>
+                      <option value="form">Forms</option>
+                      <option value="navigation">Navigation</option>
+                      <option value="feedback">Feedback</option>
+                      <option value="data">Data Display</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Tags (comma separated)</label>
+                    <Input
+                      placeholder="e.g., button, click, action"
+                      value={newComponent.tags}
+                      onChange={(e) => setNewComponent(prev => ({ ...prev, tags: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Component Code</label>
+                  <textarea
+                    value={newComponent.code}
+                    onChange={(e) => setNewComponent(prev => ({ ...prev, code: e.target.value }))}
+                    placeholder="Paste your component code here..."
+                    className="w-full h-32 px-3 py-2 border border-input rounded-md bg-background text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateOpen(false)}
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreateComponent}
+                  disabled={!newComponent.name || !newComponent.displayName || !newComponent.code}
+                >
+                  <Save className="w-4 h-4 mr-1" />
+                  Create Component
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
         
         {/* Search */}

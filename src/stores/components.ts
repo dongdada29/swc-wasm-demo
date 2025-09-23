@@ -258,7 +258,7 @@ export const useComponentStore = create<ComponentState>((set, get) => ({
   addComponent: (component) => {
     const newComponent: Component = {
       ...component,
-      id: component.id || \`custom-\${Date.now()}\`,
+      id: component.id || `custom-${Date.now()}`,
       isCustom: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -315,7 +315,7 @@ export const useComponentStore = create<ComponentState>((set, get) => ({
   },
   
   generateComponentCode: (component) => {
-    return \`// Generated from \${component.displayName} component
-\${component.code}\`
+    return `// Generated from ${component.displayName} component
+${component.code}`
   }
 }))
