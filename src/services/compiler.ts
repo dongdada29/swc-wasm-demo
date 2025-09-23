@@ -40,7 +40,7 @@ export interface CompileResult {
 export class CompilerService {
   private static instance: CompilerService
   private initialized = false
-  private swcWasm: any = null
+  private useFallback = true // 暂时使用后备模式
 
   static getInstance(): CompilerService {
     if (!CompilerService.instance) {
@@ -53,72 +53,20 @@ export class CompilerService {
     if (this.initialized) return
     
     try {
-      // 动态导入 SWC WASM
-      const swcModule = await import('@swc/wasm-web')
-      this.swcWasm = swcModule.transformSync || swcModule.default?.transformSync
-      
-      if (!this.swcWasm) {
-        throw new Error('SWC WASM transformSync function not found')
-      }
-      
-      // Warm up SWC WASM
-      this.swcWasm('console.log("test")', {})
+      // 暂时跳过 SWC WASM 初始化，直接使用后备模式
+      console.log('Using fallback compiler mode (SWC WASM disabled)')
       this.initialized = true
-      console.log('SWC WASM initialized successfully')
     } catch (error) {
-      console.error('Failed to initialize SWC WASM:', error)
-      // 不抛出错误，允许应用继续运行
+      console.error('Failed to initialize compiler:', error)
       this.initialized = true
     }
   }
 
   compile(code: string, options: CompileOptions = {}): CompileResult {
-    if (!this.initialized || !this.swcWasm) {
-      // 如果 SWC 未初始化，返回原始代码
-      return {
-        code,
-        errors: ['SWC compiler not initialized']
-      }
-    }
-
-    try {
-      const defaultOptions: CompileOptions = {
-        jsc: {
-          target: 'es2017',
-          parser: {
-            syntax: 'typescript',
-            tsx: true,
-            decorators: true,
-            dynamicImport: true
-          },
-          transform: {
-            react: {
-              pragma: 'React.createElement',
-              pragmaFrag: 'React.Fragment',
-              runtime: 'automatic'
-            }
-          }
-        },
-        module: {
-          type: 'es6'
-        },
-        sourceMaps: true
-      }
-
-      const mergedOptions = this.mergeOptions(defaultOptions, options)
-      
-      const result = this.swcWasm(code, mergedOptions)
-      
-      return {
-        code: result.code,
-        map: result.map
-      }
-    } catch (error) {
-      console.error('Compilation error:', error)
-      return {
-        code,
-        errors: [error instanceof Error ? error.message : 'Unknown compilation error']
-      }
+    // 后备模式：返回原始代码，不做编译
+    return {
+      code,
+      errors: this.useFallback ? ['Using fallback compiler mode'] : undefined
     }
   }
 
