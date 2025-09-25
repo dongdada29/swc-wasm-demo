@@ -3,17 +3,18 @@ import {
   Routes,
   Route,
   useLocation,
-  Link,
   useNavigate,
 } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { FileTree } from "./components/FileTree";
 import { CodeEditor } from "./components/CodeEditor";
 import { Preview } from "./components/Preview";
-import { ComponentLibrary } from "./components/ComponentLibrary";
+// import { ComponentLibrary } from "./components/ComponentLibrary"; // 暂时未使用
 import { DashboardPage } from "./pages/DashboardPage";
 import { Button } from "./components/ui/button";
 import { ToastProvider, useToast } from "./components/ui/toast";
+import { ConfirmDialog } from "./components/ui/confirm-dialog";
+import { useConfirmDialog } from "./hooks/useConfirmDialog";
 import { useWorkspaceStore, getProjectIdFromUrl } from "./stores/workspace";
 import {
   startDev,
@@ -95,13 +96,21 @@ function Navigation({
 }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { dialogState, confirm, closeDialog } = useConfirmDialog();
   const isActive = (path: string) => location.pathname === path;
 
   const handleNavigation = async (path: string) => {
     // 如果当前在 editor 页面且服务正在运行，需要先停止服务
     if (location.pathname === "/editor" && isServiceRunning) {
-      const confirmMessage = `开发服务器正在运行\n\n离开页面前是否先停止开发服务器？`;
-      if (confirm(confirmMessage)) {
+      const confirmed = await confirm({
+        title: "确认离开页面",
+        description: "开发服务器正在运行\n\n离开页面前是否先停止开发服务器？",
+        confirmText: "停止并离开",
+        cancelText: "取消",
+        variant: "default",
+      });
+
+      if (confirmed) {
         const canLeave = await onPageLeave();
         if (canLeave) {
           navigate(path);
@@ -113,26 +122,40 @@ function Navigation({
   };
 
   return (
-    <nav className="flex items-center gap-2">
-      <Button
-        variant={isActive("/") ? "default" : "ghost"}
-        size="sm"
-        onClick={() => handleNavigation("/")}
-        className="flex items-center gap-2"
-      >
-        <LayoutDashboard className="w-4 h-4" />
-        Dashboard
-      </Button>
-      <Button
-        variant={isActive("/editor") ? "default" : "ghost"}
-        size="sm"
-        onClick={() => handleNavigation("/editor")}
-        className="flex items-center gap-2"
-      >
-        <Code className="w-4 h-4" />
-        Editor
-      </Button>
-    </nav>
+    <>
+      <nav className="flex items-center gap-2">
+        <Button
+          variant={isActive("/") ? "default" : "ghost"}
+          size="sm"
+          onClick={() => handleNavigation("/")}
+          className="flex items-center gap-2"
+        >
+          <LayoutDashboard className="w-4 h-4" />
+          Dashboard
+        </Button>
+        <Button
+          variant={isActive("/editor") ? "default" : "ghost"}
+          size="sm"
+          onClick={() => handleNavigation("/editor")}
+          className="flex items-center gap-2"
+        >
+          <Code className="w-4 h-4" />
+          Editor
+        </Button>
+      </nav>
+
+      <ConfirmDialog
+        open={dialogState.open}
+        onOpenChange={closeDialog}
+        title={dialogState.title}
+        description={dialogState.description}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        variant={dialogState.variant}
+        onConfirm={dialogState.onConfirm || (() => {})}
+        onCancel={dialogState.onCancel || (() => {})}
+      />
+    </>
   );
 }
 
@@ -149,6 +172,7 @@ function Header({
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const { setWorkspace } = useWorkspaceStore();
   const { addToast } = useToast();
+  const { dialogState, confirm, closeDialog } = useConfirmDialog();
   const navigate = useNavigate();
 
   // 处理重启开发服务器
@@ -302,11 +326,17 @@ function Header({
           });
 
           // 显示成功信息，并跳转到 editor 页面
-          const confirmMessage = `项目上传并启动成功！\n项目ID: ${newProjectId}\n开发服务器: ${
-            devServerUrl || "未提供"
-          }\n\n是否跳转到编辑器页面？`;
+          const confirmed = await confirm({
+            title: "项目上传成功",
+            description: `项目上传并启动成功！\n项目ID: ${newProjectId}\n开发服务器: ${
+              devServerUrl || "未提供"
+            }\n\n是否跳转到编辑器页面？`,
+            confirmText: "跳转到编辑器",
+            cancelText: "稍后跳转",
+            variant: "default",
+          });
 
-          if (confirm(confirmMessage)) {
+          if (confirmed) {
             // 跳转到 editor 页面并带上 projectId 参数
             navigate(`/editor?projectId=${encodeURIComponent(newProjectId)}`);
           }
@@ -333,78 +363,94 @@ function Header({
   };
 
   return (
-    <header className="flex items-center justify-between p-4 border-b">
-      <div className="flex items-center gap-6">
-        <h1 className="text-2xl font-bold">Web IDE</h1>
-        <Navigation
-          isServiceRunning={isServiceRunning}
-          onPageLeave={onPageLeave}
-        />
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">{workspace.name}</span>
+    <>
+      <header className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-6">
+          <h1 className="text-2xl font-bold">Web IDE</h1>
+          <Navigation
+            isServiceRunning={isServiceRunning}
+            onPageLeave={onPageLeave}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            {workspace.name}
+          </span>
 
-        {/* 项目控制按钮 */}
-        {workspace.projectId && (
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRestartDev}
-              disabled={isLoading}
-            >
-              {loadingAction === "restart" ? (
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-              ) : (
-                <RotateCcw className="w-4 h-4 mr-1" />
-              )}
-              重启
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleStopDev}
-              disabled={isLoading}
-            >
-              {loadingAction === "stop" ? (
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-              ) : (
-                <Square className="w-4 h-4 mr-1" />
-              )}
-              停止
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleBuildProject}
-              disabled={isLoading}
-            >
-              {loadingAction === "build" ? (
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-              ) : (
-                <Hammer className="w-4 h-4 mr-1" />
-              )}
-              构建
-            </Button>
-          </>
-        )}
-
-        {/* 项目操作按钮 */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleUploadProject}
-          disabled={isLoading}
-        >
-          {loadingAction === "upload" ? (
-            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-          ) : (
-            <Upload className="w-4 h-4 mr-1" />
+          {/* 项目控制按钮 */}
+          {workspace.projectId && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRestartDev}
+                disabled={isLoading}
+              >
+                {loadingAction === "restart" ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                )}
+                重启
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleStopDev}
+                disabled={isLoading}
+              >
+                {loadingAction === "stop" ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <Square className="w-4 h-4 mr-1" />
+                )}
+                停止
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBuildProject}
+                disabled={isLoading}
+              >
+                {loadingAction === "build" ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <Hammer className="w-4 h-4 mr-1" />
+                )}
+                构建
+              </Button>
+            </>
           )}
-          导入项目
-        </Button>
-      </div>
-    </header>
+
+          {/* 项目操作按钮 */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleUploadProject}
+            disabled={isLoading}
+          >
+            {loadingAction === "upload" ? (
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4 mr-1" />
+            )}
+            导入项目
+          </Button>
+        </div>
+      </header>
+
+      <ConfirmDialog
+        open={dialogState.open}
+        onOpenChange={closeDialog}
+        title={dialogState.title}
+        description={dialogState.description}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        variant={dialogState.variant}
+        onConfirm={dialogState.onConfirm || (() => {})}
+        onCancel={dialogState.onCancel || (() => {})}
+      />
+    </>
   );
 }
 
@@ -423,7 +469,7 @@ function IDEPage({
   const [showError, setShowError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"preview" | "code">("preview"); // 默认选中页面预览
   const { updateDevServerUrl, updateProjectId } = useWorkspaceStore();
-  const { addToast } = useToast();
+  // const { addToast } = useToast(); // 暂时未使用
   const navigate = useNavigate();
 
   // 使用 ref 来跟踪是否已经启动过开发环境，避免重复调用
@@ -531,7 +577,6 @@ function IDEPage({
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [isServiceRunning, workspace.projectId]); // 依赖服务状态和项目ID
-
 
   // 如果正在启动开发环境，显示加载状态
   if (isStartingDev) {
@@ -676,88 +721,89 @@ function IDEPage({
   );
 }
 
-function ComponentsPage() {
-  return (
-    <main className="flex h-[calc(100vh-80px)]">
-      <div className="w-full">
-        <ComponentLibrary />
-      </div>
-    </main>
-  );
-}
+// 暂时注释掉未使用的组件
+// function ComponentsPage() {
+//   return (
+//     <main className="flex h-[calc(100vh-80px)]">
+//       <div className="w-full">
+//         <ComponentLibrary />
+//       </div>
+//     </main>
+//   );
+// }
 
-function PreviewPage() {
-  return (
-    <main className="flex h-[calc(100vh-80px)]">
-      <div className="flex-1">
-        <Preview />
-      </div>
-    </main>
-  );
-}
+// function PreviewPage() {
+//   return (
+//     <main className="flex h-[calc(100vh-80px)]">
+//       <div className="flex-1">
+//         <Preview />
+//       </div>
+//     </main>
+//   );
+// }
 
-function SettingsPage() {
-  return (
-    <main className="flex h-[calc(100vh-80px)]">
-      <div className="flex-1 p-6">
-        <h2 className="text-2xl font-bold mb-6">Settings</h2>
-        <div className="max-w-2xl space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Editor Settings</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Theme</label>
-                <select className="w-full mt-1 px-3 py-2 border rounded-md">
-                  <option>Light</option>
-                  <option>Dark</option>
-                  <option>System</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Font Size</label>
-                <input
-                  type="number"
-                  defaultValue="14"
-                  className="w-full mt-1 px-3 py-2 border rounded-md"
-                />
-              </div>
-            </div>
-          </div>
+// function SettingsPage() {
+//   return (
+//     <main className="flex h-[calc(100vh-80px)]">
+//       <div className="flex-1 p-6">
+//         <h2 className="text-2xl font-bold mb-6">Settings</h2>
+//         <div className="max-w-2xl space-y-6">
+//           <div className="space-y-4">
+//             <h3 className="text-lg font-semibold">Editor Settings</h3>
+//             <div className="grid grid-cols-2 gap-4">
+//               <div>
+//                 <label className="text-sm font-medium">Theme</label>
+//                 <select className="w-full mt-1 px-3 py-2 border rounded-md">
+//                   <option>Light</option>
+//                   <option>Dark</option>
+//                   <option>System</option>
+//                 </select>
+//               </div>
+//               <div>
+//                 <label className="text-sm font-medium">Font Size</label>
+//                 <input
+//                   type="number"
+//                   defaultValue="14"
+//                   className="w-full mt-1 px-3 py-2 border rounded-md"
+//                 />
+//               </div>
+//             </div>
+//           </div>
 
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Project Settings</h3>
-            <div>
-              <label className="text-sm font-medium">Project Name</label>
-              <input
-                type="text"
-                defaultValue="New Project"
-                className="w-full mt-1 px-3 py-2 border rounded-md"
-              />
-            </div>
-          </div>
+//           <div className="space-y-4">
+//             <h3 className="text-lg font-semibold">Project Settings</h3>
+//             <div>
+//               <label className="text-sm font-medium">Project Name</label>
+//               <input
+//                 type="text"
+//                 defaultValue="New Project"
+//                 className="w-full mt-1 px-3 py-2 border rounded-md"
+//               />
+//             </div>
+//           </div>
 
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Build Settings</h3>
-            <div className="space-y-2">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" defaultChecked />
-                Auto-save on change
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" defaultChecked />
-                Auto-preview on save
-              </label>
-            </div>
-          </div>
+//           <div className="space-y-4">
+//             <h3 className="text-lg font-semibold">Build Settings</h3>
+//             <div className="space-y-2">
+//               <label className="flex items-center gap-2">
+//                 <input type="checkbox" defaultChecked />
+//                 Auto-save on change
+//               </label>
+//               <label className="flex items-center gap-2">
+//                 <input type="checkbox" defaultChecked />
+//                 Auto-preview on save
+//               </label>
+//             </div>
+//           </div>
 
-          <div className="flex gap-2">
-            <Button>Save Settings</Button>
-            <Button variant="outline">Reset to Default</Button>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
-}
+//           <div className="flex gap-2">
+//             <Button>Save Settings</Button>
+//             <Button variant="outline">Reset to Default</Button>
+//           </div>
+//         </div>
+//       </div>
+//     </main>
+//   );
+// }
 
 export default App;

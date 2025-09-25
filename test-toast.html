@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toast 通知组件测试</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+        }
+        .test-case { 
+            border: 1px solid #ccc; 
+            margin: 10px 0; 
+            padding: 15px; 
+            border-radius: 5px; 
+            background: white;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .button { 
+            display: inline-block; 
+            padding: 8px 16px; 
+            margin: 5px; 
+            background-color: #007bff; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 4px; 
+            cursor: pointer;
+            border: none;
+        }
+        .button:hover { background-color: #0056b3; }
+        .button.success { background-color: #28a745; }
+        .button.error { background-color: #dc3545; }
+        .button.warning { background-color: #ffc107; color: #212529; }
+        .button.info { background-color: #17a2b8; }
+        
+        /* Toast 样式模拟 */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+        
+        .toast {
+            margin-bottom: 10px;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: flex-start;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .toast.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .toast.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .toast.warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .toast.info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .toast-icon {
+            margin-right: 12px;
+            font-size: 20px;
+        }
+        
+        .toast-content {
+            flex: 1;
+        }
+        
+        .toast-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .toast-message {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .toast-close {
+            margin-left: 12px;
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        
+        .toast-close:hover {
+            opacity: 1;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .demo-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>Toast 通知组件测试</h1>
+    <p>这个页面用于测试新的 Toast 通知组件功能，替代原有的 alert 弹窗</p>
+
+    <div class="demo-section">
+        <h2>Toast 类型演示</h2>
+        <p>点击下面的按钮测试不同类型的 Toast 通知：</p>
+        
+        <button class="button success" onclick="showToast('success', '操作成功', '您的操作已成功完成')">
+            成功通知
+        </button>
+        
+        <button class="button error" onclick="showToast('error', '操作失败', '请检查输入信息后重试')">
+            错误通知
+        </button>
+        
+        <button class="button warning" onclick="showToast('warning', '警告信息', '请注意相关操作风险')">
+            警告通知
+        </button>
+        
+        <button class="button info" onclick="showToast('info', '提示信息', '这是一条普通的信息提示')">
+            信息通知
+        </button>
+    </div>
+
+    <div class="demo-section">
+        <h2>实际应用场景</h2>
+        <p>模拟实际项目中的通知场景：</p>
+        
+        <button class="button" onclick="simulateProjectOperation('start')">
+            启动开发服务器
+        </button>
+        
+        <button class="button" onclick="simulateProjectOperation('stop')">
+            停止开发服务器
+        </button>
+        
+        <button class="button" onclick="simulateProjectOperation('build')">
+            构建项目
+        </button>
+        
+        <button class="button" onclick="simulateProjectOperation('upload')">
+            上传项目
+        </button>
+        
+        <button class="button" onclick="simulateProjectOperation('error')">
+            模拟错误
+        </button>
+    </div>
+
+    <div class="demo-section">
+        <h2>Toast 管理</h2>
+        <button class="button" onclick="clearAllToasts()">
+            清除所有通知
+        </button>
+        
+        <button class="button" onclick="showMultipleToasts()">
+            显示多个通知
+        </button>
+    </div>
+
+    <div class="demo-section">
+        <h2>与 Alert 对比</h2>
+        <p>Toast 通知相比 Alert 的优势：</p>
+        <ul>
+            <li>✅ 非阻塞式，不影响用户操作</li>
+            <li>✅ 支持多种类型和样式</li>
+            <li>✅ 自动消失机制</li>
+            <li>✅ 支持手动关闭</li>
+            <li>✅ 更好的视觉体验</li>
+            <li>✅ 支持批量管理</li>
+        </ul>
+        
+        <button class="button error" onclick="showAlert()">
+            显示传统 Alert（对比）
+        </button>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+        let toastCount = 0;
+
+        // 显示 Toast 通知
+        function showToast(type, title, message) {
+            const container = document.getElementById('toast-container');
+            const toastId = `toast-${++toastCount}`;
+            
+            const toast = document.createElement('div');
+            toast.id = toastId;
+            toast.className = `toast ${type}`;
+            
+            const icon = getIcon(type);
+            
+            toast.innerHTML = `
+                <div class="toast-icon">${icon}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" onclick="removeToast('${toastId}')">&times;</button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // 自动移除（5秒后）
+            setTimeout(() => {
+                removeToast(toastId);
+            }, 5000);
+        }
+
+        // 获取图标
+        function getIcon(type) {
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            return icons[type] || 'ℹ️';
+        }
+
+        // 移除 Toast
+        function removeToast(toastId) {
+            const toast = document.getElementById(toastId);
+            if (toast) {
+                toast.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }
+        }
+
+        // 清除所有 Toast
+        function clearAllToasts() {
+            const container = document.getElementById('toast-container');
+            container.innerHTML = '';
+        }
+
+        // 模拟项目操作
+        function simulateProjectOperation(operation) {
+            const operations = {
+                start: {
+                    success: () => showToast('success', '开发服务器启动成功', '项目 antd-vite-template-6601 的开发服务器已启动'),
+                    error: () => showToast('error', '启动失败', '请检查项目配置和网络连接')
+                },
+                stop: {
+                    success: () => showToast('success', '开发服务器已停止', '项目 antd-vite-template-6601 的开发服务器已停止'),
+                    error: () => showToast('error', '停止失败', '无法停止开发服务器，请重试')
+                },
+                build: {
+                    success: () => showToast('success', '项目构建成功', '项目 antd-vite-template-6601 构建完成'),
+                    error: () => showToast('error', '构建失败', '构建过程中出现错误，请检查代码')
+                },
+                upload: {
+                    success: () => showToast('success', '项目上传成功', '项目已成功上传并启动'),
+                    error: () => showToast('error', '上传失败', '文件上传失败，请检查网络连接')
+                },
+                error: {
+                    error: () => showToast('error', '操作失败', '请先选择一个项目后再进行操作')
+                }
+            };
+
+            const op = operations[operation];
+            if (op) {
+                // 随机显示成功或失败
+                const isSuccess = Math.random() > 0.3; // 70% 成功率
+                if (isSuccess && op.success) {
+                    op.success();
+                } else if (op.error) {
+                    op.error();
+                }
+            }
+        }
+
+        // 显示多个通知
+        function showMultipleToasts() {
+            const notifications = [
+                { type: 'info', title: '系统提示', message: '正在加载项目文件...' },
+                { type: 'success', title: '文件加载完成', message: '已加载 15 个文件' },
+                { type: 'warning', title: '依赖检查', message: '发现 2 个过时的依赖包' },
+                { type: 'info', title: '编译完成', message: 'TypeScript 编译成功' }
+            ];
+
+            notifications.forEach((notification, index) => {
+                setTimeout(() => {
+                    showToast(notification.type, notification.title, notification.message);
+                }, index * 1000);
+            });
+        }
+
+        // 显示传统 Alert（对比）
+        function showAlert() {
+            alert('这是传统的 alert 弹窗\n\n缺点：\n- 阻塞用户操作\n- 样式固定\n- 无法自定义\n- 用户体验差');
+        }
+
+        // 添加 CSS 动画
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 页面加载完成
+        window.addEventListener('load', function() {
+            console.log('Toast 通知组件测试页面已加载');
+            showToast('info', '页面加载完成', 'Toast 通知组件测试页面已准备就绪');
+        });
+    </script>
+</body>
+</html>
