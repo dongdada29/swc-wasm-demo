@@ -101,7 +101,7 @@
 ## 技术细节
 
 ### API配置
-- 基础URL: `http://192.168.1.43:8081`
+- 基础URL: `http://192.168.31.125:8081`
 - 所有请求都包含适当的Content-Type和Accept头
 - 支持JSON和FormData格式
 

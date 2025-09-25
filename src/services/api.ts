@@ -4,7 +4,7 @@
  */
 
 // API基础配置
-const API_BASE_URL = "http://192.168.1.43:8081";
+const API_BASE_URL = "http://192.168.31.125:8081";
 
 /**
  * 启动开发环境接口
