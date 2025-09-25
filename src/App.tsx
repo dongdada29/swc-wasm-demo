@@ -11,6 +11,7 @@ import { Preview } from "./components/Preview";
 import { ComponentLibrary } from "./components/ComponentLibrary";
 import { DashboardPage } from "./pages/DashboardPage";
 import { Button } from "./components/ui/button";
+import { ToastProvider, useToast } from "./components/ui/toast";
 import { useWorkspaceStore, getProjectIdFromUrl } from "./stores/workspace";
 import {
   startDev,
@@ -35,17 +36,19 @@ function App() {
   const { workspace } = useWorkspaceStore();
 
   return (
-    <Router>
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto">
-          <Header workspace={workspace} />
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/editor" element={<IDEPage workspace={workspace} />} />
-          </Routes>
+    <ToastProvider>
+      <Router>
+        <div className="min-h-screen bg-background">
+          <div className="container mx-auto">
+            <Header workspace={workspace} />
+            <Routes>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/editor" element={<IDEPage workspace={workspace} />} />
+            </Routes>
+          </div>
         </div>
-      </div>
-    </Router>
+      </Router>
+    </ToastProvider>
   );
 }
 
@@ -79,11 +82,16 @@ function Header({ workspace }: { workspace: any }) {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const { setWorkspace } = useWorkspaceStore();
+  const { addToast } = useToast();
 
   // 处理重启开发服务器
   const handleRestartDev = async () => {
     if (!workspace.projectId) {
-      alert("请先选择一个项目");
+      addToast({
+        type: "warning",
+        title: "请先选择一个项目",
+        message: "请从首页选择一个项目后再进行操作"
+      });
       return;
     }
 
@@ -91,13 +99,18 @@ function Header({ workspace }: { workspace: any }) {
       setIsLoading(true);
       setLoadingAction("restart");
       await restartDev(workspace.projectId);
-      alert("开发服务器重启成功");
+      addToast({
+        type: "success",
+        title: "开发服务器重启成功",
+        message: `项目 ${workspace.projectId} 的开发服务器已重启`
+      });
     } catch (error) {
       console.error("重启开发服务器失败:", error);
-      alert(
-        "重启开发服务器失败: " +
-          (error instanceof Error ? error.message : "未知错误")
-      );
+      addToast({
+        type: "error",
+        title: "重启开发服务器失败",
+        message: error instanceof Error ? error.message : "未知错误"
+      });
     } finally {
       setIsLoading(false);
       setLoadingAction(null);
@@ -107,7 +120,11 @@ function Header({ workspace }: { workspace: any }) {
   // 处理停止开发服务器
   const handleStopDev = async () => {
     if (!workspace.projectId) {
-      alert("请先选择一个项目");
+      addToast({
+        type: "warning",
+        title: "请先选择一个项目",
+        message: "请从首页选择一个项目后再进行操作"
+      });
       return;
     }
 
@@ -115,13 +132,18 @@ function Header({ workspace }: { workspace: any }) {
       setIsLoading(true);
       setLoadingAction("stop");
       await stopDev(workspace.projectId);
-      alert("开发服务器已停止");
+      addToast({
+        type: "success",
+        title: "开发服务器已停止",
+        message: `项目 ${workspace.projectId} 的开发服务器已停止`
+      });
     } catch (error) {
       console.error("停止开发服务器失败:", error);
-      alert(
-        "停止开发服务器失败: " +
-          (error instanceof Error ? error.message : "未知错误")
-      );
+      addToast({
+        type: "error",
+        title: "停止开发服务器失败",
+        message: error instanceof Error ? error.message : "未知错误"
+      });
     } finally {
       setIsLoading(false);
       setLoadingAction(null);
@@ -131,7 +153,11 @@ function Header({ workspace }: { workspace: any }) {
   // 处理构建项目
   const handleBuildProject = async () => {
     if (!workspace.projectId) {
-      alert("请先选择一个项目");
+      addToast({
+        type: "warning",
+        title: "请先选择一个项目",
+        message: "请从首页选择一个项目后再进行操作"
+      });
       return;
     }
 
@@ -139,12 +165,18 @@ function Header({ workspace }: { workspace: any }) {
       setIsLoading(true);
       setLoadingAction("build");
       await buildProject(workspace.projectId);
-      alert("项目构建成功");
+      addToast({
+        type: "success",
+        title: "项目构建成功",
+        message: `项目 ${workspace.projectId} 构建完成`
+      });
     } catch (error) {
       console.error("构建项目失败:", error);
-      alert(
-        "构建项目失败: " + (error instanceof Error ? error.message : "未知错误")
-      );
+      addToast({
+        type: "error",
+        title: "构建项目失败",
+        message: error instanceof Error ? error.message : "未知错误"
+      });
     } finally {
       setIsLoading(false);
       setLoadingAction(null);
@@ -214,14 +246,19 @@ function Header({ workspace }: { workspace: any }) {
             )}`;
           }
         } else {
-          alert("项目上传成功，但返回数据格式异常");
+          addToast({
+            type: "warning",
+            title: "项目上传成功，但返回数据格式异常",
+            message: "请检查服务器响应数据格式"
+          });
         }
       } catch (error) {
         console.error("上传项目失败:", error);
-        alert(
-          "上传项目失败: " +
-            (error instanceof Error ? error.message : "未知错误")
-        );
+        addToast({
+          type: "error",
+          title: "上传项目失败",
+          message: error instanceof Error ? error.message : "未知错误"
+        });
       } finally {
         setIsLoading(false);
         setLoadingAction(null);
@@ -401,7 +438,7 @@ function IDEPage({ workspace }: { workspace: any }) {
       // 如果服务正在运行，显示浏览器原生确认对话框
       if (isServiceRunning && workspace.projectId) {
         console.log("🚨 [IDEPage] 检测到页面即将离开，服务正在运行");
-        
+
         // 设置确认消息
         const message = `开发服务器正在运行（项目ID: ${workspace.projectId}）\n\n离开页面前是否先停止开发服务器？`;
         event.returnValue = message;
@@ -417,7 +454,6 @@ function IDEPage({ workspace }: { workspace: any }) {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [isServiceRunning, workspace.projectId]); // 依赖服务状态和项目ID
-
 
   // 如果正在启动开发环境，显示加载状态
   if (isStartingDev) {
@@ -504,10 +540,7 @@ function IDEPage({ workspace }: { workspace: any }) {
             </h3>
             <p className="text-gray-700 mb-4">{showError}</p>
             <div className="flex justify-end">
-              <Button
-                variant="default"
-                onClick={() => setShowError(null)}
-              >
+              <Button variant="default" onClick={() => setShowError(null)}>
                 确定
               </Button>
             </div>
