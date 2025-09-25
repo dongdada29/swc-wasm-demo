@@ -8,10 +8,7 @@ import { useEffect, useState, useRef } from "react";
 import { FileTree } from "./components/FileTree";
 import { CodeEditor } from "./components/CodeEditor";
 import { Preview } from "./components/Preview";
-import { ComponentLibrary } from "./components/ComponentLibrary";
-import { NewProjectPage } from "./pages/NewProjectPage";
 import { DashboardPage } from "./pages/DashboardPage";
-import { ApiTestPage } from "./pages/ApiTestPage";
 import { Button } from "./components/ui/button";
 import { useWorkspaceStore, getProjectIdFromUrl } from "./stores/workspace";
 import {
@@ -23,10 +20,7 @@ import {
 } from "./services/api";
 import {
   Plus,
-  Settings,
-  Play,
   Code,
-  Library,
   Globe,
   LayoutDashboard,
   Loader2,
@@ -34,7 +28,6 @@ import {
   RotateCcw,
   Hammer,
   Upload,
-  FolderPlus,
 } from "lucide-react";
 
 function App() {
@@ -48,11 +41,6 @@ function App() {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/editor" element={<IDEPage workspace={workspace} />} />
-            <Route path="/components" element={<ComponentsPage />} />
-            <Route path="/preview" element={<PreviewPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/new-project" element={<NewProjectPage />} />
-            <Route path="/api-test" element={<ApiTestPage />} />
           </Routes>
         </div>
       </div>
@@ -80,36 +68,6 @@ function Navigation() {
         <a href="/editor" className="flex items-center gap-2">
           <Code className="w-4 h-4" />
           Editor
-        </a>
-      </Button>
-      <Button
-        variant={isActive("/components") ? "default" : "ghost"}
-        size="sm"
-        asChild
-      >
-        <a href="/components" className="flex items-center gap-2">
-          <Library className="w-4 h-4" />
-          Components
-        </a>
-      </Button>
-      <Button
-        variant={isActive("/preview") ? "default" : "ghost"}
-        size="sm"
-        asChild
-      >
-        <a href="/preview" className="flex items-center gap-2">
-          <Globe className="w-4 h-4" />
-          Preview
-        </a>
-      </Button>
-      <Button
-        variant={isActive("/api-test") ? "default" : "ghost"}
-        size="sm"
-        asChild
-      >
-        <a href="/api-test" className="flex items-center gap-2">
-          <Code className="w-4 h-4" />
-          API测试
         </a>
       </Button>
     </nav>
@@ -326,12 +284,6 @@ function Header({ workspace }: { workspace: any }) {
         )}
 
         {/* 项目操作按钮 */}
-        <Button variant="outline" size="sm" asChild>
-          <a href="/new-project">
-            <FolderPlus className="w-4 h-4 mr-1" />
-            新建
-          </a>
-        </Button>
         <Button
           variant="outline"
           size="sm"
@@ -343,16 +295,7 @@ function Header({ workspace }: { workspace: any }) {
           ) : (
             <Upload className="w-4 h-4 mr-1" />
           )}
-          导入
-        </Button>
-        <Button variant="outline" size="sm">
-          <Play className="w-4 h-4 mr-1" />
-          运行
-        </Button>
-        <Button variant="outline" size="sm" asChild>
-          <a href="/settings">
-            <Settings className="w-4 h-4" />
-          </a>
+          导入项目
         </Button>
       </div>
     </header>
@@ -366,6 +309,7 @@ function IDEPage({ workspace }: { workspace: any }) {
   const [isServiceRunning, setIsServiceRunning] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [isStoppingService, setIsStoppingService] = useState(false);
+  const [activeTab, setActiveTab] = useState<"preview" | "code">("preview"); // 默认选中页面预览
   const { updateDevServerUrl, updateProjectId } = useWorkspaceStore();
 
   // 使用 ref 来跟踪是否已经启动过开发环境，避免重复调用
@@ -644,16 +588,39 @@ function IDEPage({ workspace }: { workspace: any }) {
           </div>
         </aside>
 
-        {/* Main Editor Area */}
-        <div className="flex-1 flex">
-          {/* Editor */}
-          <div className="flex-1 border-r flex flex-col">
-            <CodeEditor />
+        {/* Main Content Area with Tabs */}
+        <div className="flex-1 flex flex-col">
+          {/* Tab Navigation */}
+          <div className="border-b bg-muted/30">
+            <div className="flex">
+              <button
+                onClick={() => setActiveTab("preview")}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "preview"
+                    ? "border-primary text-primary bg-background"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground"
+                }`}
+              >
+                <Globe className="w-4 h-4 inline mr-2" />
+                页面预览
+              </button>
+              <button
+                onClick={() => setActiveTab("code")}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "code"
+                    ? "border-primary text-primary bg-background"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground"
+                }`}
+              >
+                <Code className="w-4 h-4 inline mr-2" />
+                代码预览
+              </button>
+            </div>
           </div>
 
-          {/* Preview */}
-          <div className="flex-1 flex flex-col">
-            <Preview />
+          {/* Tab Content */}
+          <div className="flex-1">
+            {activeTab === "preview" ? <Preview /> : <CodeEditor />}
           </div>
         </div>
       </main>
