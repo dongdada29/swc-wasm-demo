@@ -43,7 +43,10 @@ function App() {
             <Header workspace={workspace} />
             <Routes>
               <Route path="/" element={<DashboardPage />} />
-              <Route path="/editor" element={<IDEPage workspace={workspace} />} />
+              <Route
+                path="/editor"
+                element={<IDEPage workspace={workspace} />}
+              />
             </Routes>
           </div>
         </div>
@@ -90,7 +93,7 @@ function Header({ workspace }: { workspace: any }) {
       addToast({
         type: "warning",
         title: "请先选择一个项目",
-        message: "请从首页选择一个项目后再进行操作"
+        message: "请从首页选择一个项目后再进行操作",
       });
       return;
     }
@@ -102,14 +105,14 @@ function Header({ workspace }: { workspace: any }) {
       addToast({
         type: "success",
         title: "开发服务器重启成功",
-        message: `项目 ${workspace.projectId} 的开发服务器已重启`
+        message: `项目 ${workspace.projectId} 的开发服务器已重启`,
       });
     } catch (error) {
       console.error("重启开发服务器失败:", error);
       addToast({
         type: "error",
         title: "重启开发服务器失败",
-        message: error instanceof Error ? error.message : "未知错误"
+        message: error instanceof Error ? error.message : "未知错误",
       });
     } finally {
       setIsLoading(false);
@@ -123,7 +126,7 @@ function Header({ workspace }: { workspace: any }) {
       addToast({
         type: "warning",
         title: "请先选择一个项目",
-        message: "请从首页选择一个项目后再进行操作"
+        message: "请从首页选择一个项目后再进行操作",
       });
       return;
     }
@@ -135,14 +138,14 @@ function Header({ workspace }: { workspace: any }) {
       addToast({
         type: "success",
         title: "开发服务器已停止",
-        message: `项目 ${workspace.projectId} 的开发服务器已停止`
+        message: `项目 ${workspace.projectId} 的开发服务器已停止`,
       });
     } catch (error) {
       console.error("停止开发服务器失败:", error);
       addToast({
         type: "error",
         title: "停止开发服务器失败",
-        message: error instanceof Error ? error.message : "未知错误"
+        message: error instanceof Error ? error.message : "未知错误",
       });
     } finally {
       setIsLoading(false);
@@ -156,7 +159,7 @@ function Header({ workspace }: { workspace: any }) {
       addToast({
         type: "warning",
         title: "请先选择一个项目",
-        message: "请从首页选择一个项目后再进行操作"
+        message: "请从首页选择一个项目后再进行操作",
       });
       return;
     }
@@ -168,14 +171,14 @@ function Header({ workspace }: { workspace: any }) {
       addToast({
         type: "success",
         title: "项目构建成功",
-        message: `项目 ${workspace.projectId} 构建完成`
+        message: `项目 ${workspace.projectId} 构建完成`,
       });
     } catch (error) {
       console.error("构建项目失败:", error);
       addToast({
         type: "error",
         title: "构建项目失败",
-        message: error instanceof Error ? error.message : "未知错误"
+        message: error instanceof Error ? error.message : "未知错误",
       });
     } finally {
       setIsLoading(false);
@@ -249,7 +252,7 @@ function Header({ workspace }: { workspace: any }) {
           addToast({
             type: "warning",
             title: "项目上传成功，但返回数据格式异常",
-            message: "请检查服务器响应数据格式"
+            message: "请检查服务器响应数据格式",
           });
         }
       } catch (error) {
@@ -257,7 +260,7 @@ function Header({ workspace }: { workspace: any }) {
         addToast({
           type: "error",
           title: "上传项目失败",
-          message: error instanceof Error ? error.message : "未知错误"
+          message: error instanceof Error ? error.message : "未知错误",
         });
       } finally {
         setIsLoading(false);
@@ -348,6 +351,7 @@ function IDEPage({ workspace }: { workspace: any }) {
   const [showError, setShowError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"preview" | "code">("preview"); // 默认选中页面预览
   const { updateDevServerUrl, updateProjectId } = useWorkspaceStore();
+  const { addToast } = useToast();
 
   // 使用 ref 来跟踪是否已经启动过开发环境，避免重复调用
   const hasStartedDevRef = useRef(false);
@@ -434,9 +438,11 @@ function IDEPage({ workspace }: { workspace: any }) {
 
   // 页面离开检测和服务停止逻辑
   useEffect(() => {
+    let isLeaving = false;
+
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       // 如果服务正在运行，显示浏览器原生确认对话框
-      if (isServiceRunning && workspace.projectId) {
+      if (isServiceRunning && workspace.projectId && !isLeaving) {
         console.log("🚨 [IDEPage] 检测到页面即将离开，服务正在运行");
 
         // 设置确认消息
@@ -446,14 +452,48 @@ function IDEPage({ workspace }: { workspace: any }) {
       }
     };
 
-    // 添加页面离开事件监听器
+    // 监听页面隐藏事件，在页面真正离开时停止服务
+    const handleVisibilityChange = async () => {
+      if (document.hidden && isServiceRunning && workspace.projectId) {
+        console.log("🚨 [IDEPage] 页面隐藏，正在停止服务...");
+        try {
+          await stopDev(workspace.projectId);
+          console.log("✅ [IDEPage] 服务已停止");
+          setIsServiceRunning(false);
+        } catch (error) {
+          console.error("❌ [IDEPage] 停止服务失败:", error);
+        }
+      }
+    };
+
+    // 监听页面真正离开事件
+    const handlePageHide = async () => {
+      if (isServiceRunning && workspace.projectId) {
+        console.log("🚨 [IDEPage] 页面离开，正在停止服务...");
+        try {
+          // 使用 sendBeacon 发送同步请求，确保在页面卸载时也能执行
+          const data = JSON.stringify({ projectId: workspace.projectId });
+          navigator.sendBeacon('/api/custom-page/stop-dev', data);
+          console.log("✅ [IDEPage] 服务停止请求已发送");
+        } catch (error) {
+          console.error("❌ [IDEPage] 停止服务失败:", error);
+        }
+      }
+    };
+
+    // 添加事件监听器
     window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", handlePageHide);
 
     // 清理函数
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", handlePageHide);
     };
   }, [isServiceRunning, workspace.projectId]); // 依赖服务状态和项目ID
+
 
   // 如果正在启动开发环境，显示加载状态
   if (isStartingDev) {
