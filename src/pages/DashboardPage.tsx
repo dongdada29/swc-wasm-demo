@@ -54,6 +54,14 @@ export function DashboardPage() {
       lastModified: new Date("2024-01-20"),
       files: [],
     },
+    {
+      id: "antd-vite-template-6601",
+      name: "Ant Design Vite Template",
+      description: "基于 Ant Design 和 Vite 的现代化前端项目模板",
+      type: "react",
+      lastModified: new Date("2024-01-22"),
+      files: [],
+    },
   ]);
 
   const { setWorkspace } = useWorkspaceStore();
