@@ -61,8 +61,8 @@ function App() {
       <Router>
         <div className="min-h-screen bg-background">
           <div className="container mx-auto">
-            <Header 
-              workspace={workspace} 
+            <Header
+              workspace={workspace}
               isServiceRunning={isServiceRunning}
               onPageLeave={handlePageLeave}
             />
@@ -71,8 +71,8 @@ function App() {
               <Route
                 path="/editor"
                 element={
-                  <IDEPage 
-                    workspace={workspace} 
+                  <IDEPage
+                    workspace={workspace}
                     isServiceRunning={isServiceRunning}
                     setIsServiceRunning={setIsServiceRunning}
                   />
@@ -86,11 +86,11 @@ function App() {
   );
 }
 
-function Navigation({ 
-  isServiceRunning, 
-  onPageLeave 
-}: { 
-  isServiceRunning: boolean; 
+function Navigation({
+  isServiceRunning,
+  onPageLeave,
+}: {
+  isServiceRunning: boolean;
   onPageLeave: () => Promise<boolean>;
 }) {
   const location = useLocation();
@@ -100,9 +100,12 @@ function Navigation({
   const handleNavigation = async (path: string) => {
     // 如果当前在 editor 页面且服务正在运行，需要先停止服务
     if (location.pathname === "/editor" && isServiceRunning) {
-      const canLeave = await onPageLeave();
-      if (canLeave) {
-        navigate(path);
+      const confirmMessage = `开发服务器正在运行\n\n离开页面前是否先停止开发服务器？`;
+      if (confirm(confirmMessage)) {
+        const canLeave = await onPageLeave();
+        if (canLeave) {
+          navigate(path);
+        }
       }
     } else {
       navigate(path);
@@ -111,8 +114,8 @@ function Navigation({
 
   return (
     <nav className="flex items-center gap-2">
-      <Button 
-        variant={isActive("/") ? "default" : "ghost"} 
+      <Button
+        variant={isActive("/") ? "default" : "ghost"}
         size="sm"
         onClick={() => handleNavigation("/")}
         className="flex items-center gap-2"
@@ -133,13 +136,13 @@ function Navigation({
   );
 }
 
-function Header({ 
-  workspace, 
-  isServiceRunning, 
-  onPageLeave 
-}: { 
-  workspace: any; 
-  isServiceRunning: boolean; 
+function Header({
+  workspace,
+  isServiceRunning,
+  onPageLeave,
+}: {
+  workspace: any;
+  isServiceRunning: boolean;
   onPageLeave: () => Promise<boolean>;
 }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -333,9 +336,9 @@ function Header({
     <header className="flex items-center justify-between p-4 border-b">
       <div className="flex items-center gap-6">
         <h1 className="text-2xl font-bold">Web IDE</h1>
-        <Navigation 
-          isServiceRunning={isServiceRunning} 
-          onPageLeave={onPageLeave} 
+        <Navigation
+          isServiceRunning={isServiceRunning}
+          onPageLeave={onPageLeave}
         />
       </div>
       <div className="flex items-center gap-2">
@@ -405,13 +408,13 @@ function Header({
   );
 }
 
-function IDEPage({ 
-  workspace, 
-  isServiceRunning, 
-  setIsServiceRunning 
-}: { 
-  workspace: any; 
-  isServiceRunning: boolean; 
+function IDEPage({
+  workspace,
+  isServiceRunning,
+  setIsServiceRunning,
+}: {
+  workspace: any;
+  isServiceRunning: boolean;
   setIsServiceRunning: (running: boolean) => void;
 }) {
   const [isStartingDev, setIsStartingDev] = useState(false);
