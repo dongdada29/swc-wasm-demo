@@ -8,6 +8,7 @@ import { useEffect, useState, useRef } from "react";
 import { FileTree } from "./components/FileTree";
 import { CodeEditor } from "./components/CodeEditor";
 import { Preview } from "./components/Preview";
+import { ComponentLibrary } from "./components/ComponentLibrary";
 import { DashboardPage } from "./pages/DashboardPage";
 import { Button } from "./components/ui/button";
 import { useWorkspaceStore, getProjectIdFromUrl } from "./stores/workspace";
@@ -307,8 +308,7 @@ function IDEPage({ workspace }: { workspace: any }) {
   const [devStartError, setDevStartError] = useState<string | null>(null);
   const [missingProjectId, setMissingProjectId] = useState(false);
   const [isServiceRunning, setIsServiceRunning] = useState(false);
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const [isStoppingService, setIsStoppingService] = useState(false);
+  const [showError, setShowError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"preview" | "code">("preview"); // 默认选中页面预览
   const { updateDevServerUrl, updateProjectId } = useWorkspaceStore();
 
@@ -398,19 +398,14 @@ function IDEPage({ workspace }: { workspace: any }) {
   // 页面离开检测和服务停止逻辑
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      // 如果服务正在运行，阻止离开并显示确认对话框
+      // 如果服务正在运行，显示浏览器原生确认对话框
       if (isServiceRunning && workspace.projectId) {
         console.log("🚨 [IDEPage] 检测到页面即将离开，服务正在运行");
-
-        // 阻止默认的离开行为
-        event.preventDefault();
-        event.returnValue = ""; // Chrome 需要这个
-
-        // 显示 React 确认对话框
-        setShowLeaveConfirm(true);
-
-        // 阻止页面离开
-        return false;
+        
+        // 设置确认消息
+        const message = `开发服务器正在运行（项目ID: ${workspace.projectId}）\n\n离开页面前是否先停止开发服务器？`;
+        event.returnValue = message;
+        return message;
       }
     };
 
@@ -423,36 +418,6 @@ function IDEPage({ workspace }: { workspace: any }) {
     };
   }, [isServiceRunning, workspace.projectId]); // 依赖服务状态和项目ID
 
-  // 处理停止服务并离开
-  const handleStopServiceAndLeave = async () => {
-    if (!workspace.projectId) return;
-
-    try {
-      setIsStoppingService(true);
-      console.log("🛑 [IDEPage] 用户确认停止服务，正在调用停止接口...");
-      await stopDev(workspace.projectId);
-      console.log("✅ [IDEPage] 服务已停止");
-      setIsServiceRunning(false);
-      setShowLeaveConfirm(false);
-
-      // 停止服务后允许页面离开
-      window.location.href = "/";
-    } catch (error) {
-      console.error("❌ [IDEPage] 停止服务失败:", error);
-      alert("停止开发服务器失败，但页面仍将离开");
-      setShowLeaveConfirm(false);
-      window.location.href = "/";
-    } finally {
-      setIsStoppingService(false);
-    }
-  };
-
-  // 处理保持服务运行并离开
-  const handleKeepServiceAndLeave = () => {
-    console.log("ℹ️ [IDEPage] 用户选择保持服务运行");
-    setShowLeaveConfirm(false);
-    window.location.href = "/";
-  };
 
   // 如果正在启动开发环境，显示加载状态
   if (isStartingDev) {
@@ -530,44 +495,20 @@ function IDEPage({ workspace }: { workspace: any }) {
 
   return (
     <>
-      {/* 离开确认对话框 */}
-      {showLeaveConfirm && (
+      {/* 错误提示 */}
+      {showError && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-4 text-yellow-800">
-              ⚠️ 开发服务器正在运行
+            <h3 className="text-lg font-semibold mb-4 text-red-800">
+              ⚠️ 操作失败
             </h3>
-            <p className="text-gray-700 mb-4">
-              检测到开发服务器正在运行（项目ID:{" "}
-              <code className="bg-gray-100 px-1 rounded">
-                {workspace.projectId}
-              </code>
-              ）
-            </p>
-            <p className="text-gray-600 mb-6">
-              离开页面前是否先停止开发服务器？
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={handleKeepServiceAndLeave}
-                disabled={isStoppingService}
-              >
-                保持运行
-              </Button>
+            <p className="text-gray-700 mb-4">{showError}</p>
+            <div className="flex justify-end">
               <Button
                 variant="default"
-                onClick={handleStopServiceAndLeave}
-                disabled={isStoppingService}
+                onClick={() => setShowError(null)}
               >
-                {isStoppingService ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    停止中...
-                  </>
-                ) : (
-                  "停止服务"
-                )}
+                确定
               </Button>
             </div>
           </div>
