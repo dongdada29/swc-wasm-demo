@@ -36,18 +36,47 @@ import {
 
 function App() {
   const { workspace } = useWorkspaceStore();
+  const [isServiceRunning, setIsServiceRunning] = useState(false);
+
+  // 处理页面离开时的服务停止
+  const handlePageLeave = async () => {
+    if (isServiceRunning && workspace.projectId) {
+      try {
+        console.log("🛑 [App] 用户确认离开，正在停止服务...");
+        const { stopDev } = await import("./services/api");
+        await stopDev(workspace.projectId);
+        console.log("✅ [App] 服务已停止，允许页面离开");
+        setIsServiceRunning(false);
+        return true; // 允许离开
+      } catch (error) {
+        console.error("❌ [App] 停止服务失败:", error);
+        return true; // 即使失败也允许离开
+      }
+    }
+    return true; // 没有服务运行，允许离开
+  };
 
   return (
     <ToastProvider>
       <Router>
         <div className="min-h-screen bg-background">
           <div className="container mx-auto">
-            <Header workspace={workspace} />
+            <Header 
+              workspace={workspace} 
+              isServiceRunning={isServiceRunning}
+              onPageLeave={handlePageLeave}
+            />
             <Routes>
               <Route path="/" element={<DashboardPage />} />
               <Route
                 path="/editor"
-                element={<IDEPage workspace={workspace} />}
+                element={
+                  <IDEPage 
+                    workspace={workspace} 
+                    isServiceRunning={isServiceRunning}
+                    setIsServiceRunning={setIsServiceRunning}
+                  />
+                }
               />
             </Routes>
           </div>
@@ -57,33 +86,62 @@ function App() {
   );
 }
 
-function Navigation() {
+function Navigation({ 
+  isServiceRunning, 
+  onPageLeave 
+}: { 
+  isServiceRunning: boolean; 
+  onPageLeave: () => Promise<boolean>;
+}) {
   const location = useLocation();
+  const navigate = useNavigate();
   const isActive = (path: string) => location.pathname === path;
+
+  const handleNavigation = async (path: string) => {
+    // 如果当前在 editor 页面且服务正在运行，需要先停止服务
+    if (location.pathname === "/editor" && isServiceRunning) {
+      const canLeave = await onPageLeave();
+      if (canLeave) {
+        navigate(path);
+      }
+    } else {
+      navigate(path);
+    }
+  };
 
   return (
     <nav className="flex items-center gap-2">
-      <Button variant={isActive("/") ? "default" : "ghost"} size="sm" asChild>
-        <Link to="/" className="flex items-center gap-2">
-          <LayoutDashboard className="w-4 h-4" />
-          Dashboard
-        </Link>
+      <Button 
+        variant={isActive("/") ? "default" : "ghost"} 
+        size="sm"
+        onClick={() => handleNavigation("/")}
+        className="flex items-center gap-2"
+      >
+        <LayoutDashboard className="w-4 h-4" />
+        Dashboard
       </Button>
       <Button
         variant={isActive("/editor") ? "default" : "ghost"}
         size="sm"
-        asChild
+        onClick={() => handleNavigation("/editor")}
+        className="flex items-center gap-2"
       >
-        <Link to="/editor" className="flex items-center gap-2">
-          <Code className="w-4 h-4" />
-          Editor
-        </Link>
+        <Code className="w-4 h-4" />
+        Editor
       </Button>
     </nav>
   );
 }
 
-function Header({ workspace }: { workspace: any }) {
+function Header({ 
+  workspace, 
+  isServiceRunning, 
+  onPageLeave 
+}: { 
+  workspace: any; 
+  isServiceRunning: boolean; 
+  onPageLeave: () => Promise<boolean>;
+}) {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const { setWorkspace } = useWorkspaceStore();
@@ -275,7 +333,10 @@ function Header({ workspace }: { workspace: any }) {
     <header className="flex items-center justify-between p-4 border-b">
       <div className="flex items-center gap-6">
         <h1 className="text-2xl font-bold">Web IDE</h1>
-        <Navigation />
+        <Navigation 
+          isServiceRunning={isServiceRunning} 
+          onPageLeave={onPageLeave} 
+        />
       </div>
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">{workspace.name}</span>
@@ -344,11 +405,18 @@ function Header({ workspace }: { workspace: any }) {
   );
 }
 
-function IDEPage({ workspace }: { workspace: any }) {
+function IDEPage({ 
+  workspace, 
+  isServiceRunning, 
+  setIsServiceRunning 
+}: { 
+  workspace: any; 
+  isServiceRunning: boolean; 
+  setIsServiceRunning: (running: boolean) => void;
+}) {
   const [isStartingDev, setIsStartingDev] = useState(false);
   const [devStartError, setDevStartError] = useState<string | null>(null);
   const [missingProjectId, setMissingProjectId] = useState(false);
-  const [isServiceRunning, setIsServiceRunning] = useState(false);
   const [showError, setShowError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"preview" | "code">("preview"); // 默认选中页面预览
   const { updateDevServerUrl, updateProjectId } = useWorkspaceStore();
@@ -440,11 +508,9 @@ function IDEPage({ workspace }: { workspace: any }) {
 
   // 页面离开检测和服务停止逻辑
   useEffect(() => {
-    let isLeaving = false;
-
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       // 如果服务正在运行，显示浏览器原生确认对话框
-      if (isServiceRunning && workspace.projectId && !isLeaving) {
+      if (isServiceRunning && workspace.projectId) {
         console.log("🚨 [IDEPage] 检测到页面即将离开，服务正在运行");
 
         // 设置确认消息
@@ -454,47 +520,15 @@ function IDEPage({ workspace }: { workspace: any }) {
       }
     };
 
-    // 监听页面隐藏事件，在页面真正离开时停止服务
-    const handleVisibilityChange = async () => {
-      if (document.hidden && isServiceRunning && workspace.projectId) {
-        console.log("🚨 [IDEPage] 页面隐藏，正在停止服务...");
-        try {
-          await stopDev(workspace.projectId);
-          console.log("✅ [IDEPage] 服务已停止");
-          setIsServiceRunning(false);
-        } catch (error) {
-          console.error("❌ [IDEPage] 停止服务失败:", error);
-        }
-      }
-    };
-
-    // 监听页面真正离开事件
-    const handlePageHide = async () => {
-      if (isServiceRunning && workspace.projectId) {
-        console.log("🚨 [IDEPage] 页面离开，正在停止服务...");
-        try {
-          // 使用 sendBeacon 发送同步请求，确保在页面卸载时也能执行
-          const data = JSON.stringify({ projectId: workspace.projectId });
-          navigator.sendBeacon("/api/custom-page/stop-dev", data);
-          console.log("✅ [IDEPage] 服务停止请求已发送");
-        } catch (error) {
-          console.error("❌ [IDEPage] 停止服务失败:", error);
-        }
-      }
-    };
-
     // 添加事件监听器
     window.addEventListener("beforeunload", handleBeforeUnload);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("pagehide", handlePageHide);
 
     // 清理函数
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("pagehide", handlePageHide);
     };
   }, [isServiceRunning, workspace.projectId]); // 依赖服务状态和项目ID
+
 
   // 如果正在启动开发环境，显示加载状态
   if (isStartingDev) {
@@ -533,11 +567,7 @@ function IDEPage({ workspace }: { workspace: any }) {
               >
                 创建新项目
               </Button>
-              <Button
-                onClick={() => navigate("/")}
-                variant="outline"
-                size="sm"
-              >
+              <Button onClick={() => navigate("/")} variant="outline" size="sm">
                 返回首页
               </Button>
             </div>
