@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中文 ProjectId 测试</title>
+</head>
+
+<body>
+    <h1>中文 ProjectId 测试</h1>
+    <div id="test-results"></div>
+
+    <script>
+        // 测试中文 projectId 的 URL 编码
+        function testChineseProjectId() {
+            const testCases = [
+                "测试项目123",
+                "我的前端项目",
+                "project-测试",
+                "中文项目名-english",
+                "项目@#$%^&*()",
+                "测试项目/路径",
+                "测试项目?参数=值",
+                "测试项目#锚点"
+            ];
+
+            const results = document.getElementById('test-results');
+            results.innerHTML = '<h2>测试结果：</h2>';
+
+            testCases.forEach((projectId, index) => {
+                const encoded = encodeURIComponent(projectId);
+                const decoded = decodeURIComponent(encoded);
+
+                const testResult = document.createElement('div');
+                testResult.style.border = '1px solid #ccc';
+                testResult.style.margin = '10px 0';
+                testResult.style.padding = '10px';
+                testResult.innerHTML = `
+                    <h3>测试 ${index + 1}: ${projectId}</h3>
+                    <p><strong>原始:</strong> ${projectId}</p>
+                    <p><strong>编码后:</strong> ${encoded}</p>
+                    <p><strong>解码后:</strong> ${decoded}</p>
+                    <p><strong>是否一致:</strong> <span style="color: ${projectId === decoded ? 'green' : 'red'}">${projectId === decoded ? '✓' : '✗'}</span></p>
+                    <p><strong>包含中文:</strong> <span style="color: ${/[\u4e00-\u9fff]/.test(projectId) ? 'blue' : 'gray'}">${/[\u4e00-\u9fff]/.test(projectId) ? '是' : '否'}</span></p>
+                `;
+                results.appendChild(testResult);
+            });
+
+            // 测试 API URL 构建
+            const apiBaseUrl = "http://192.168.1.43:8081";
+            const testProjectId = "我的测试项目";
+            const apiUrl = `${apiBaseUrl}/api/custom-page/dev-status?projectId=${encodeURIComponent(testProjectId)}`;
+
+            const apiTest = document.createElement('div');
+            apiTest.style.border = '2px solid #007acc';
+            apiTest.style.margin = '20px 0';
+            apiTest.style.padding = '15px';
+            apiTest.style.backgroundColor = '#f0f8ff';
+            apiTest.innerHTML = `
+                <h3>API URL 测试</h3>
+                <p><strong>项目ID:</strong> ${testProjectId}</p>
+                <p><strong>API URL:</strong> <a href="${apiUrl}" target="_blank">${apiUrl}</a></p>
+                <p><strong>URL 长度:</strong> ${apiUrl.length} 字符</p>
+            `;
+            results.appendChild(apiTest);
+        }
+
+        // 页面加载时运行测试
+        window.onload = testChineseProjectId;
+    </script>
+</body>
+
+</html>

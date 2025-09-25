@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL 参数测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .test-case {
+            border: 1px solid #ccc;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
+
+        code {
+            background-color: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 5px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>URL 参数测试页面</h1>
+    <p>这个页面用于测试 editor 页面的 URL 参数解析功能</p>
+
+    <div class="test-case info">
+        <h3>测试说明</h3>
+        <p>点击下面的按钮测试不同的 URL 参数组合：</p>
+    </div>
+
+    <div class="test-case">
+        <h3>测试用例</h3>
+        <div>
+            <a href="/editor?projectId=test-project-123" class="button">英文项目ID</a>
+            <a href="/editor?projectId=我的测试项目" class="button">中文项目ID</a>
+            <a href="/editor?projectId=project-测试-123" class="button">中英文混合</a>
+            <a href="/editor?projectId=project@#$%^&*()" class="button">特殊字符</a>
+            <a href="/editor?projectId=项目/路径/测试" class="button">包含路径字符</a>
+            <a href="/editor?projectId=项目?参数=值" class="button">包含查询字符</a>
+            <a href="/editor?projectId=项目#锚点" class="button">包含锚点字符</a>
+        </div>
+    </div>
+
+    <div class="test-case">
+        <h3>错误测试</h3>
+        <div>
+            <a href="/editor" class="button">无参数（应该显示错误提示）</a>
+            <a href="/editor?projectId=" class="button">空参数</a>
+            <a href="/editor?otherParam=value" class="button">错误参数名</a>
+        </div>
+    </div>
+
+    <div class="test-case">
+        <h3>当前 URL 参数</h3>
+        <div id="current-params"></div>
+    </div>
+
+    <div class="test-case">
+        <h3>JavaScript 测试</h3>
+        <button onclick="testUrlParsing()" class="button">运行 URL 解析测试</button>
+        <div id="test-results"></div>
+    </div>
+
+    <script>
+        // 显示当前 URL 参数
+        function showCurrentParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const paramsDiv = document.getElementById('current-params');
+
+            if (urlParams.size === 0) {
+                paramsDiv.innerHTML = '<p>当前 URL 没有参数</p>';
+            } else {
+                let html = '<ul>';
+                for (const [key, value] of urlParams) {
+                    html += `<li><strong>${key}:</strong> ${value}</li>`;
+                }
+                html += '</ul>';
+                paramsDiv.innerHTML = html;
+            }
+        }
+
+        // 测试 URL 解析功能
+        function testUrlParsing() {
+            const testCases = [
+                { url: '/editor?projectId=test-project', expected: 'test-project' },
+                { url: '/editor?projectId=我的项目', expected: '我的项目' },
+                { url: '/editor?projectId=project-测试-123', expected: 'project-测试-123' },
+                { url: '/editor?projectId=project@#$%', expected: 'project@#$%' },
+                { url: '/editor', expected: null },
+                { url: '/editor?projectId=', expected: '' },
+                { url: '/editor?otherParam=value', expected: null },
+            ];
+
+            const resultsDiv = document.getElementById('test-results');
+            let html = '<h4>测试结果：</h4>';
+
+            testCases.forEach((testCase, index) => {
+                // 模拟 URL 解析
+                const url = new URL(testCase.url, window.location.origin);
+                const projectId = url.searchParams.get('projectId');
+                const success = projectId === testCase.expected;
+
+                html += `
+                    <div class="test-case ${success ? 'success' : 'error'}">
+                        <h5>测试 ${index + 1}: ${success ? '✓ 通过' : '✗ 失败'}</h5>
+                        <p><strong>URL:</strong> <code>${testCase.url}</code></p>
+                        <p><strong>期望结果:</strong> ${testCase.expected || 'null'}</p>
+                        <p><strong>实际结果:</strong> ${projectId || 'null'}</p>
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // 页面加载时显示当前参数
+        window.onload = showCurrentParams;
+    </script>
+</body>
+
+</html>

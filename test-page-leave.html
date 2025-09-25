@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>页面离开检测测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .test-case {
+            border: 1px solid #ccc;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
+
+        .warning {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 5px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        .button.danger {
+            background-color: #dc3545;
+        }
+
+        .button.danger:hover {
+            background-color: #c82333;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .status.running {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status.stopped {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.unknown {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>页面离开检测测试</h1>
+    <p>这个页面用于测试 editor 页面的离开检测和服务停止功能</p>
+
+    <div class="test-case info">
+        <h3>测试说明</h3>
+        <p>模拟 editor 页面的页面离开检测功能：</p>
+        <ul>
+            <li>当服务正在运行时，尝试离开页面会触发确认对话框</li>
+            <li>用户可以选择停止服务后离开，或保持服务运行</li>
+            <li>测试各种离开页面的方式</li>
+        </ul>
+    </div>
+
+    <div class="test-case">
+        <h3>服务状态模拟</h3>
+        <div id="service-status" class="status stopped">服务状态: 已停止</div>
+        <button onclick="toggleServiceStatus()" class="button">切换服务状态</button>
+        <button onclick="simulateServiceStart()" class="button">模拟服务启动</button>
+        <button onclick="simulateServiceStop()" class="button danger">模拟服务停止</button>
+    </div>
+
+    <div class="test-case">
+        <h3>页面离开测试</h3>
+        <p>尝试以下操作来测试页面离开检测：</p>
+        <ul>
+            <li>点击浏览器的后退按钮</li>
+            <li>点击浏览器的前进按钮</li>
+            <li>在地址栏输入新URL并回车</li>
+            <li>点击书签或其他链接</li>
+            <li>关闭浏览器标签页</li>
+            <li>刷新页面</li>
+        </ul>
+        <button onclick="simulatePageLeave()" class="button">模拟页面离开</button>
+        <button onclick="simulateRefresh()" class="button">模拟页面刷新</button>
+    </div>
+
+    <div class="test-case">
+        <h3>测试结果</h3>
+        <div id="test-results"></div>
+    </div>
+
+    <div class="test-case warning">
+        <h3>注意事项</h3>
+        <ul>
+            <li>现代浏览器对 beforeunload 事件有严格限制</li>
+            <li>只有在用户与页面有交互后才会触发确认对话框</li>
+            <li>某些浏览器可能不会显示自定义的确认消息</li>
+            <li>异步操作在 beforeunload 中可能无法完成</li>
+        </ul>
+    </div>
+
+    <script>
+        let isServiceRunning = false;
+        let hasUserInteracted = false;
+
+        // 模拟服务状态切换
+        function toggleServiceStatus() {
+            isServiceRunning = !isServiceRunning;
+            updateServiceStatus();
+            addTestResult(`服务状态已切换为: ${isServiceRunning ? '运行中' : '已停止'}`);
+        }
+
+        // 模拟服务启动
+        function simulateServiceStart() {
+            isServiceRunning = true;
+            updateServiceStatus();
+            addTestResult('服务已启动');
+        }
+
+        // 模拟服务停止
+        function simulateServiceStop() {
+            isServiceRunning = false;
+            updateServiceStatus();
+            addTestResult('服务已停止');
+        }
+
+        // 更新服务状态显示
+        function updateServiceStatus() {
+            const statusDiv = document.getElementById('service-status');
+            if (isServiceRunning) {
+                statusDiv.className = 'status running';
+                statusDiv.textContent = '服务状态: 运行中';
+            } else {
+                statusDiv.className = 'status stopped';
+                statusDiv.textContent = '服务状态: 已停止';
+            }
+        }
+
+        // 模拟页面离开
+        function simulatePageLeave() {
+            if (isServiceRunning) {
+                const shouldStop = confirm(
+                    '检测到开发服务器正在运行\n\n' +
+                    '离开页面前是否先停止开发服务器？\n\n' +
+                    '点击"确定"将停止服务后离开\n' +
+                    '点击"取消"将保持服务运行'
+                );
+
+                if (shouldStop) {
+                    addTestResult('用户选择停止服务并离开');
+                    simulateServiceStop();
+                } else {
+                    addTestResult('用户选择保持服务运行');
+                }
+            } else {
+                addTestResult('服务未运行，可以直接离开');
+            }
+        }
+
+        // 模拟页面刷新
+        function simulateRefresh() {
+            if (isServiceRunning) {
+                const shouldStop = confirm(
+                    '检测到开发服务器正在运行\n\n' +
+                    '刷新页面前是否先停止开发服务器？\n\n' +
+                    '点击"确定"将停止服务后刷新\n' +
+                    '点击"取消"将保持服务运行'
+                );
+
+                if (shouldStop) {
+                    addTestResult('用户选择停止服务并刷新');
+                    simulateServiceStop();
+                } else {
+                    addTestResult('用户选择保持服务运行');
+                }
+            } else {
+                addTestResult('服务未运行，可以直接刷新');
+            }
+        }
+
+        // 添加测试结果
+        function addTestResult(message) {
+            const resultsDiv = document.getElementById('test-results');
+            const timestamp = new Date().toLocaleTimeString();
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test-case success';
+            resultDiv.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        // 页面离开检测
+        window.addEventListener('beforeunload', function (event) {
+            if (isServiceRunning && hasUserInteracted) {
+                console.log('🚨 检测到页面即将离开，服务正在运行');
+
+                // 阻止默认的离开行为
+                event.preventDefault();
+                event.returnValue = ''; // Chrome 需要这个
+
+                // 显示确认对话框
+                const shouldStop = confirm(
+                    '检测到开发服务器正在运行\n\n' +
+                    '离开页面前是否先停止开发服务器？\n\n' +
+                    '点击"确定"将停止服务后离开\n' +
+                    '点击"取消"将保持服务运行'
+                );
+
+                if (shouldStop) {
+                    console.log('🛑 用户确认停止服务');
+                    // 注意：在 beforeunload 中无法进行异步操作
+                    // 这里只是模拟，实际实现中需要在用户交互时处理
+                } else {
+                    console.log('ℹ️ 用户选择保持服务运行');
+                }
+            }
+        });
+
+        // 记录用户交互
+        document.addEventListener('click', function () {
+            hasUserInteracted = true;
+        });
+
+        // 页面加载完成
+        window.addEventListener('load', function () {
+            addTestResult('页面加载完成，开始测试');
+            updateServiceStatus();
+        });
+
+        // 页面可见性变化检测
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) {
+                addTestResult('页面变为隐藏状态');
+            } else {
+                addTestResult('页面变为可见状态');
+            }
+        });
+    </script>
+</body>
+
+</html>

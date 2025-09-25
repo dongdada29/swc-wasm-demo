@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard 卡片跳转测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .test-case {
+            border: 1px solid #ccc;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 5px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        .card p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        .project-id {
+            background-color: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Dashboard 卡片跳转测试</h1>
+    <p>这个页面模拟 Dashboard 页面的项目卡片，测试跳转到 editor 页面的功能</p>
+
+    <div class="test-case info">
+        <h3>测试说明</h3>
+        <p>点击下面的项目卡片，测试跳转到 editor 页面并带上正确的 projectId 参数：</p>
+    </div>
+
+    <div class="card">
+        <h3>My Portfolio</h3>
+        <p>Personal portfolio website built with React</p>
+        <p><strong>项目ID:</strong> <span class="project-id">1</span></p>
+        <p><strong>类型:</strong> React</p>
+        <p><strong>最后修改:</strong> 2024-01-15</p>
+        <a href="/editor?projectId=1" class="button">打开项目</a>
+        <a href="javascript:void(0)" onclick="testUrl('1')" class="button">测试URL</a>
+    </div>
+
+    <div class="card">
+        <h3>E-commerce Dashboard</h3>
+        <p>Admin dashboard for online store</p>
+        <p><strong>项目ID:</strong> <span class="project-id">2</span></p>
+        <p><strong>类型:</strong> Next.js</p>
+        <p><strong>最后修改:</strong> 2024-01-10</p>
+        <a href="/editor?projectId=2" class="button">打开项目</a>
+        <a href="javascript:void(0)" onclick="testUrl('2')" class="button">测试URL</a>
+    </div>
+
+    <div class="card">
+        <h3>UI Component Library</h3>
+        <p>Reusable components for design system</p>
+        <p><strong>项目ID:</strong> <span class="project-id">3</span></p>
+        <p><strong>类型:</strong> UI Library</p>
+        <p><strong>最后修改:</strong> 2024-01-08</p>
+        <a href="/editor?projectId=3" class="button">打开项目</a>
+        <a href="javascript:void(0)" onclick="testUrl('3')" class="button">测试URL</a>
+    </div>
+
+    <div class="card" style="border-color: #28a745; background-color: #f8fff9;">
+        <h3>测试项目A-5166</h3>
+        <p>这是一个中文项目名称的测试项目</p>
+        <p><strong>项目ID:</strong> <span class="project-id">测试项目A-5166</span></p>
+        <p><strong>类型:</strong> React</p>
+        <p><strong>最后修改:</strong> 2024-01-20</p>
+        <a href="/editor?projectId=测试项目A-5166" class="button">打开项目</a>
+        <a href="javascript:void(0)" onclick="testUrl('测试项目A-5166')" class="button">测试URL</a>
+    </div>
+
+    <div class="test-case">
+        <h3>URL 测试结果</h3>
+        <div id="test-results"></div>
+    </div>
+
+    <div class="test-case">
+        <h3>JavaScript 测试</h3>
+        <button onclick="runAllTests()" class="button">运行所有测试</button>
+        <div id="js-test-results"></div>
+    </div>
+
+    <script>
+        // 测试单个 URL
+        function testUrl(projectId) {
+            const encodedProjectId = encodeURIComponent(projectId);
+            const url = `/editor?projectId=${encodedProjectId}`;
+
+            const resultsDiv = document.getElementById('test-results');
+            const testResult = document.createElement('div');
+            testResult.className = 'test-case success';
+            testResult.innerHTML = `
+                <h4>项目ID: ${projectId}</h4>
+                <p><strong>原始ID:</strong> ${projectId}</p>
+                <p><strong>编码后:</strong> ${encodedProjectId}</p>
+                <p><strong>完整URL:</strong> <a href="${url}" target="_blank">${url}</a></p>
+                <p><strong>URL长度:</strong> ${url.length} 字符</p>
+            `;
+            resultsDiv.appendChild(testResult);
+        }
+
+        // 运行所有测试
+        function runAllTests() {
+            const testCases = [
+                { id: "1", name: "My Portfolio" },
+                { id: "2", name: "E-commerce Dashboard" },
+                { id: "3", name: "UI Component Library" },
+                { id: "测试项目A-5166", name: "测试项目A-5166" }
+            ];
+
+            const resultsDiv = document.getElementById('js-test-results');
+            let html = '<h4>测试结果：</h4>';
+
+            testCases.forEach((testCase, index) => {
+                const encodedId = encodeURIComponent(testCase.id);
+                const url = `/editor?projectId=${encodedId}`;
+
+                // 测试解码
+                const decodedId = decodeURIComponent(encodedId);
+                const isCorrect = decodedId === testCase.id;
+
+                html += `
+                    <div class="test-case ${isCorrect ? 'success' : 'error'}">
+                        <h5>测试 ${index + 1}: ${testCase.name} ${isCorrect ? '✓' : '✗'}</h5>
+                        <p><strong>项目ID:</strong> ${testCase.id}</p>
+                        <p><strong>编码后:</strong> ${encodedId}</p>
+                        <p><strong>解码后:</strong> ${decodedId}</p>
+                        <p><strong>是否一致:</strong> ${isCorrect ? '是' : '否'}</p>
+                        <p><strong>完整URL:</strong> <a href="${url}" target="_blank">${url}</a></p>
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // 页面加载时运行基本测试
+        window.onload = function () {
+            console.log('Dashboard 卡片跳转测试页面已加载');
+            console.log('可用的测试项目:');
+            console.log('1. My Portfolio (ID: 1)');
+            console.log('2. E-commerce Dashboard (ID: 2)');
+            console.log('3. UI Component Library (ID: 3)');
+            console.log('4. 测试项目A-5166 (ID: 测试项目A-5166)');
+        };
+    </script>
+</body>
+
+</html>
