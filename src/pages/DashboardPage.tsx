@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -65,6 +66,7 @@ export function DashboardPage() {
   ]);
 
   const { setWorkspace } = useWorkspaceStore();
+  const navigate = useNavigate();
 
   const openProject = (project: Project) => {
     const workspace = {
@@ -85,9 +87,7 @@ export function DashboardPage() {
     };
     setWorkspace(workspace);
     // 跳转到编辑器页面并带上 projectId 参数
-    window.location.href = `/editor?projectId=${encodeURIComponent(
-      project.id
-    )}`;
+    navigate(`/editor?projectId=${encodeURIComponent(project.id)}`);
   };
 
   const deleteProject = (projectId: string) => {
@@ -127,11 +127,9 @@ export function DashboardPage() {
               Manage your web development projects
             </p>
           </div>
-          <Button asChild>
-            <a href="/new-project">
-              <Plus className="w-4 h-4 mr-2" />
-              New Project
-            </a>
+          <Button onClick={() => navigate("/new-project")}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Project
           </Button>
         </div>
 
@@ -215,8 +213,8 @@ export function DashboardPage() {
               <p className="text-muted-foreground mb-4">
                 Create your first project to get started
               </p>
-              <Button asChild>
-                <a href="/new-project">Create Project</a>
+              <Button onClick={() => navigate("/new-project")}>
+                Create Project
               </Button>
             </CardContent>
           </Card>

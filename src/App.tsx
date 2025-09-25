@@ -3,6 +3,8 @@ import {
   Routes,
   Route,
   useLocation,
+  Link,
+  useNavigate,
 } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { FileTree } from "./components/FileTree";
@@ -62,20 +64,20 @@ function Navigation() {
   return (
     <nav className="flex items-center gap-2">
       <Button variant={isActive("/") ? "default" : "ghost"} size="sm" asChild>
-        <a href="/" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <LayoutDashboard className="w-4 h-4" />
           Dashboard
-        </a>
+        </Link>
       </Button>
       <Button
         variant={isActive("/editor") ? "default" : "ghost"}
         size="sm"
         asChild
       >
-        <a href="/editor" className="flex items-center gap-2">
+        <Link to="/editor" className="flex items-center gap-2">
           <Code className="w-4 h-4" />
           Editor
-        </a>
+        </Link>
       </Button>
     </nav>
   );
@@ -86,6 +88,7 @@ function Header({ workspace }: { workspace: any }) {
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const { setWorkspace } = useWorkspaceStore();
   const { addToast } = useToast();
+  const navigate = useNavigate();
 
   // 处理重启开发服务器
   const handleRestartDev = async () => {
@@ -244,9 +247,7 @@ function Header({ workspace }: { workspace: any }) {
 
           if (confirm(confirmMessage)) {
             // 跳转到 editor 页面并带上 projectId 参数
-            window.location.href = `/editor?projectId=${encodeURIComponent(
-              newProjectId
-            )}`;
+            navigate(`/editor?projectId=${encodeURIComponent(newProjectId)}`);
           }
         } else {
           addToast({
@@ -352,6 +353,7 @@ function IDEPage({ workspace }: { workspace: any }) {
   const [activeTab, setActiveTab] = useState<"preview" | "code">("preview"); // 默认选中页面预览
   const { updateDevServerUrl, updateProjectId } = useWorkspaceStore();
   const { addToast } = useToast();
+  const navigate = useNavigate();
 
   // 使用 ref 来跟踪是否已经启动过开发环境，避免重复调用
   const hasStartedDevRef = useRef(false);
@@ -473,7 +475,7 @@ function IDEPage({ workspace }: { workspace: any }) {
         try {
           // 使用 sendBeacon 发送同步请求，确保在页面卸载时也能执行
           const data = JSON.stringify({ projectId: workspace.projectId });
-          navigator.sendBeacon('/api/custom-page/stop-dev', data);
+          navigator.sendBeacon("/api/custom-page/stop-dev", data);
           console.log("✅ [IDEPage] 服务停止请求已发送");
         } catch (error) {
           console.error("❌ [IDEPage] 停止服务失败:", error);
@@ -493,7 +495,6 @@ function IDEPage({ workspace }: { workspace: any }) {
       window.removeEventListener("pagehide", handlePageHide);
     };
   }, [isServiceRunning, workspace.projectId]); // 依赖服务状态和项目ID
-
 
   // 如果正在启动开发环境，显示加载状态
   if (isStartingDev) {
@@ -525,7 +526,7 @@ function IDEPage({ workspace }: { workspace: any }) {
             </code>
             <div className="space-y-2">
               <Button
-                onClick={() => (window.location.href = "/new-project")}
+                onClick={() => navigate("/new-project")}
                 variant="default"
                 size="sm"
                 className="mr-2"
@@ -533,7 +534,7 @@ function IDEPage({ workspace }: { workspace: any }) {
                 创建新项目
               </Button>
               <Button
-                onClick={() => (window.location.href = "/")}
+                onClick={() => navigate("/")}
                 variant="outline"
                 size="sm"
               >
