@@ -13,8 +13,7 @@ import { Preview } from "./components/Preview";
 import { DashboardPage } from "./pages/DashboardPage";
 import { Button } from "./components/ui/button";
 import { ToastProvider, useToast } from "./components/ui/toast";
-import { ConfirmDialog } from "./components/ui/confirm-dialog";
-import { useConfirmDialog } from "./hooks/useConfirmDialog";
+import { ConfirmProvider, useConfirm } from "./contexts/ConfirmContext";
 import { useWorkspaceStore, getProjectIdFromUrl } from "./stores/workspace";
 import {
   startDev,
@@ -59,30 +58,32 @@ function App() {
 
   return (
     <ToastProvider>
-      <Router>
-        <div className="min-h-screen bg-background">
-          <div className="container mx-auto">
-            <Header
-              workspace={workspace}
-              isServiceRunning={isServiceRunning}
-              onPageLeave={handlePageLeave}
-            />
-            <Routes>
-              <Route path="/" element={<DashboardPage />} />
-              <Route
-                path="/editor"
-                element={
-                  <IDEPage
-                    workspace={workspace}
-                    isServiceRunning={isServiceRunning}
-                    setIsServiceRunning={setIsServiceRunning}
-                  />
-                }
+      <ConfirmProvider>
+        <Router>
+          <div className="min-h-screen bg-background">
+            <div className="container mx-auto">
+              <Header
+                workspace={workspace}
+                isServiceRunning={isServiceRunning}
+                onPageLeave={handlePageLeave}
               />
-            </Routes>
+              <Routes>
+                <Route path="/" element={<DashboardPage />} />
+                <Route
+                  path="/editor"
+                  element={
+                    <IDEPage
+                      workspace={workspace}
+                      isServiceRunning={isServiceRunning}
+                      setIsServiceRunning={setIsServiceRunning}
+                    />
+                  }
+                />
+              </Routes>
+            </div>
           </div>
-        </div>
-      </Router>
+        </Router>
+      </ConfirmProvider>
     </ToastProvider>
   );
 }
@@ -96,7 +97,7 @@ function Navigation({
 }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { dialogState, confirm, closeDialog } = useConfirmDialog();
+  const { confirm } = useConfirm();
   const isActive = (path: string) => location.pathname === path;
 
   const handleNavigation = async (path: string) => {
@@ -122,40 +123,26 @@ function Navigation({
   };
 
   return (
-    <>
-      <nav className="flex items-center gap-2">
-        <Button
-          variant={isActive("/") ? "default" : "ghost"}
-          size="sm"
-          onClick={() => handleNavigation("/")}
-          className="flex items-center gap-2"
-        >
-          <LayoutDashboard className="w-4 h-4" />
-          Dashboard
-        </Button>
-        <Button
-          variant={isActive("/editor") ? "default" : "ghost"}
-          size="sm"
-          onClick={() => handleNavigation("/editor")}
-          className="flex items-center gap-2"
-        >
-          <Code className="w-4 h-4" />
-          Editor
-        </Button>
-      </nav>
-
-      <ConfirmDialog
-        open={dialogState.open}
-        onOpenChange={closeDialog}
-        title={dialogState.title}
-        description={dialogState.description}
-        confirmText={dialogState.confirmText}
-        cancelText={dialogState.cancelText}
-        variant={dialogState.variant}
-        onConfirm={dialogState.onConfirm || (() => {})}
-        onCancel={dialogState.onCancel || (() => {})}
-      />
-    </>
+    <nav className="flex items-center gap-2">
+      <Button
+        variant={isActive("/") ? "default" : "ghost"}
+        size="sm"
+        onClick={() => handleNavigation("/")}
+        className="flex items-center gap-2"
+      >
+        <LayoutDashboard className="w-4 h-4" />
+        Dashboard
+      </Button>
+      <Button
+        variant={isActive("/editor") ? "default" : "ghost"}
+        size="sm"
+        onClick={() => handleNavigation("/editor")}
+        className="flex items-center gap-2"
+      >
+        <Code className="w-4 h-4" />
+        Editor
+      </Button>
+    </nav>
   );
 }
 
@@ -172,7 +159,7 @@ function Header({
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const { setWorkspace } = useWorkspaceStore();
   const { addToast } = useToast();
-  const { dialogState, confirm, closeDialog } = useConfirmDialog();
+  const { confirm } = useConfirm();
   const navigate = useNavigate();
 
   // 处理重启开发服务器
@@ -363,94 +350,78 @@ function Header({
   };
 
   return (
-    <>
-      <header className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-6">
-          <h1 className="text-2xl font-bold">Web IDE</h1>
-          <Navigation
-            isServiceRunning={isServiceRunning}
-            onPageLeave={onPageLeave}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            {workspace.name}
-          </span>
+    <header className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center gap-6">
+        <h1 className="text-2xl font-bold">Web IDE</h1>
+        <Navigation
+          isServiceRunning={isServiceRunning}
+          onPageLeave={onPageLeave}
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">{workspace.name}</span>
 
-          {/* 项目控制按钮 */}
-          {workspace.projectId && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRestartDev}
-                disabled={isLoading}
-              >
-                {loadingAction === "restart" ? (
-                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                ) : (
-                  <RotateCcw className="w-4 h-4 mr-1" />
-                )}
-                重启
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleStopDev}
-                disabled={isLoading}
-              >
-                {loadingAction === "stop" ? (
-                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                ) : (
-                  <Square className="w-4 h-4 mr-1" />
-                )}
-                停止
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleBuildProject}
-                disabled={isLoading}
-              >
-                {loadingAction === "build" ? (
-                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                ) : (
-                  <Hammer className="w-4 h-4 mr-1" />
-                )}
-                构建
-              </Button>
-            </>
+        {/* 项目控制按钮 */}
+        {workspace.projectId && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRestartDev}
+              disabled={isLoading}
+            >
+              {loadingAction === "restart" ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <RotateCcw className="w-4 h-4 mr-1" />
+              )}
+              重启
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleStopDev}
+              disabled={isLoading}
+            >
+              {loadingAction === "stop" ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Square className="w-4 h-4 mr-1" />
+              )}
+              停止
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBuildProject}
+              disabled={isLoading}
+            >
+              {loadingAction === "build" ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Hammer className="w-4 h-4 mr-1" />
+              )}
+              构建
+            </Button>
+          </>
+        )}
+
+        {/* 项目操作按钮 */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleUploadProject}
+          disabled={isLoading}
+        >
+          {loadingAction === "upload" ? (
+            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+          ) : (
+            <Upload className="w-4 h-4 mr-1" />
           )}
-
-          {/* 项目操作按钮 */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleUploadProject}
-            disabled={isLoading}
-          >
-            {loadingAction === "upload" ? (
-              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-            ) : (
-              <Upload className="w-4 h-4 mr-1" />
-            )}
-            导入项目
-          </Button>
-        </div>
-      </header>
-
-      <ConfirmDialog
-        open={dialogState.open}
-        onOpenChange={closeDialog}
-        title={dialogState.title}
-        description={dialogState.description}
-        confirmText={dialogState.confirmText}
-        cancelText={dialogState.cancelText}
-        variant={dialogState.variant}
-        onConfirm={dialogState.onConfirm || (() => {})}
-        onCancel={dialogState.onCancel || (() => {})}
-      />
-    </>
+          导入项目
+        </Button>
+      </div>
+    </header>
   );
 }
 
